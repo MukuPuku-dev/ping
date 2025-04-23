@@ -1,45 +1,69 @@
 import requests
 import time
+import threading
+import os
+from flask import Flask
 
 # --- CONFIGURATION ---
 # <<< === CHANGE THIS URL === >>>
 URL_TO_PING = "https://capricious-dorian-macaroni.glitch.me/wakemeup"
 # <<< ===================== >>>
 
-INTERVAL_SECONDS = 60  # 1 minute
+PING_INTERVAL_SECONDS = 60  # 1 minute
+REQUEST_TIMEOUT = 10 # Seconds to wait for ping response
 
-# --- PINGER ---
-print(f"--- Simple Pinger Started ---")
-print(f"Pinging: {URL_TO_PING}")
-print(f"Interval: {INTERVAL_SECONDS} seconds")
-print(f"Press CTRL+C to stop.")
-print("-" * 30)
+# --- PINGER LOGIC (to run in a background thread) ---
+def run_pinger():
+    print(f"--- Pinger thread started ---")
+    print(f"Pinging: {URL_TO_PING}")
+    print(f"Interval: {PING_INTERVAL_SECONDS} seconds")
+    print("-" * 30)
 
-while True:
-    try:
-        # Get the current time for logging
-        current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+    while True:
+        try:
+            # Get the current time for logging
+            current_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-        # Send the GET request (wait max 10 seconds for response)
-        response = requests.get(URL_TO_PING, timeout=10)
+            # Send the GET request
+            response = requests.get(URL_TO_PING, timeout=REQUEST_TIMEOUT)
 
-        # Check if the status code is OK (usually 200)
-        if response.status_code == 200:
-            print(f"{current_time} - SUCCESS - Status: {response.status_code}")
-        else:
-            # Any other status code is treated as a failure here
-            print(f"{current_time} - FAILED  - Status: {response.status_code}")
+            # Check status code
+            if response.status_code == 200:
+                print(f"{current_time} - PING SUCCESS - Status: {response.status_code}")
+            else:
+                print(f"{current_time} - PING FAILED  - Status: {response.status_code}")
 
-    except requests.exceptions.Timeout:
-        # Specific error if the request takes too long
-        print(f"{current_time} - FAILED  - Request Timed Out")
-    except requests.exceptions.RequestException as e:
-        # Catch other potential errors (connection refused, DNS error, etc.)
-        print(f"{current_time} - FAILED  - Request Error: {e}")
-    except Exception as e:
-        # Catch any other unexpected errors
-         print(f"{current_time} - FAILED  - An unexpected error occurred: {e}")
+        except requests.exceptions.Timeout:
+            print(f"{current_time} - PING FAILED  - Request Timed Out")
+        except requests.exceptions.RequestException as e:
+            print(f"{current_time} - PING FAILED  - Request Error: {e}")
+        except Exception as e:
+             print(f"{current_time} - PING FAILED  - An unexpected error occurred: {e}")
 
+        # Wait for the defined interval before the next ping
+        time.sleep(PING_INTERVAL_SECONDS)
 
-    # Wait for the defined interval before the next ping
-    time.sleep(INTERVAL_SECONDS)
+# --- WEB SERVER (Flask) ---
+# Create Flask app instance
+app = Flask(__name__)
+
+# Define a simple route for Render's health checks (and basic access)
+@app.route('/')
+def hello_world():
+    # This will be shown if you access the service's URL in a browser
+    return 'Pinger service is running! Check logs for ping status.'
+
+# --- MAIN EXECUTION ---
+if __name__ == '__main__':
+    # --- Start the pinger in a background thread ---
+    # Set daemon=True so the thread exits when the main app exits
+    pinger_thread = threading.Thread(target=run_pinger, daemon=True)
+    pinger_thread.start()
+    print("--- Pinger thread initiated ---")
+
+    # --- Start the Flask web server ---
+    # Get port from environment variable or default to 10000
+    port = int(os.environ.get('PORT', 10000))
+    print(f"--- Starting Flask web server on port {port} ---")
+    # Use host='0.0.0.0' to make it accessible externally (required by Render)
+    app.run(host='0.0.0.0', port=port)
