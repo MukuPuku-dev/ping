@@ -24,14 +24,17 @@ def run_pinger():
             # Get the current time for logging
             current_time = time.strftime("%Y-%m-%d %H:%M:%S")
 
-            # Send the GET request
-            response = requests.get(URL_TO_PING, timeout=REQUEST_TIMEOUT)
+            # Define query parameters
+            query_params = {'from': 'render'}
+
+            # Send the GET request with query parameters
+            response = requests.get(URL_TO_PING, timeout=REQUEST_TIMEOUT, params=query_params)
 
             # Check status code
             if response.status_code == 200:
-                print(f"{current_time} - PING SUCCESS - Status: {response.status_code}")
+                print(f"{current_time} - PING SUCCESS - Status: {response.status_code} - URL: {response.url}") # Log URL to verify param
             else:
-                print(f"{current_time} - PING FAILED  - Status: {response.status_code}")
+                print(f"{current_time} - PING FAILED  - Status: {response.status_code} - URL: {response.url}") # Log URL to verify param
 
         except requests.exceptions.Timeout:
             print(f"{current_time} - PING FAILED  - Request Timed Out")
