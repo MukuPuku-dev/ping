@@ -9,7 +9,7 @@ from flask import Flask
 URL_TO_PING = "https://capricious-dorian-macaroni.glitch.me/wakemeup"
 # <<< ===================== >>>
 
-PING_INTERVAL_SECONDS = 60  # 1 minute
+PING_INTERVAL_SECONDS = 120  # 2 minute
 REQUEST_TIMEOUT = 10 # Seconds to wait for ping response
 
 # --- PINGER LOGIC (to run in a background thread) ---
