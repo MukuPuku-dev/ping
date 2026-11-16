@@ -15,6 +15,10 @@ PING_INTERVAL_SECONDS = 120  # 2 minutes for the original URL
 NEW_URL_TO_PING = "https://mukesh-4e2a.onrender.com/wakemeup"
 NEW_URL_PING_INTERVAL_SECONDS = 5 * 60  # 5 minutes for the new URL
 
+# --- MESSENGER DEMO URL CONFIGURATION ---
+MESSENGER_DEMO_URL = "https://mukesh-v8c1.onrender.com/wakemeup" 
+MESSENGER_PING_INTERVAL_SECONDS = 5 * 60  # 5 minutes for the Messenger Demo
+
 REQUEST_TIMEOUT = 10 # Seconds to wait for ping response
 
 # --- PINGER LOGIC (to run in background threads) ---
@@ -75,6 +79,34 @@ def run_new_pinger():
 
         time.sleep(NEW_URL_PING_INTERVAL_SECONDS)
 
+# This function will ping the Messenger Demo URL
+def run_messenger_pinger():
+    print(f"--- Messenger Demo Pinger thread started ---")
+    print(f"Pinging: {MESSENGER_DEMO_URL}")
+    print(f"Interval: {MESSENGER_PING_INTERVAL_SECONDS} seconds")
+    print("-" * 30)
+
+    while True:
+        try:
+            current_time = time.strftime("%Y-%m-%d %H:%M:%S")
+            query_params = {'from': 'render-messenger-pinger'}
+
+            response = requests.get(MESSENGER_DEMO_URL, timeout=REQUEST_TIMEOUT, params=query_params)
+
+            if response.status_code == 200:
+                print(f"{current_time} - MESSENGER PING SUCCESS - Status: {response.status_code} - URL: {response.url}")
+            else:
+                print(f"{current_time} - MESSENGER PING FAILED  - Status: {response.status_code} - URL: {response.url}")
+
+        except requests.exceptions.Timeout:
+            print(f"{current_time} - MESSENGER PING FAILED  - Request Timed Out")
+        except requests.exceptions.RequestException as e:
+            print(f"{current_time} - MESSENGER PING FAILED  - Request Error: {e}")
+        except Exception as e:
+            print(f"{current_time} - MESSENGER PING FAILED  - An unexpected error occurred: {e}")
+
+        time.sleep(MESSENGER_PING_INTERVAL_SECONDS)
+
 
 # --- WEB SERVER (Flask) ---
 app = Flask(__name__)
@@ -94,6 +126,11 @@ if __name__ == '__main__':
     new_pinger_thread = threading.Thread(target=run_new_pinger, daemon=True)
     new_pinger_thread.start()
     print("--- New Pinger thread initiated ---")
+
+    # --- Start the Messenger Demo pinger in a separate background thread ---
+    messenger_pinger_thread = threading.Thread(target=run_messenger_pinger, daemon=True)
+    messenger_pinger_thread.start()
+    print("--- Messenger Demo Pinger thread initiated ---")
 
     # --- Start the Flask web server ---
     port = int(os.environ.get('PORT', 10000))
